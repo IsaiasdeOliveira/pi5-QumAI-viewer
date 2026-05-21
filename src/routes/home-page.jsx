@@ -11,15 +11,14 @@ export function HomePage() {
 
   async function buscarPartidas() {
     setLoading(true);
-    try{
-        const response= await listGames();
-        setPartidas(response);
-    }catch (error) {
-        console.error(error);
-        setError(error);
-    }
-    finally {       
-       setLoading(false);
+    try {
+      const response = await listGames();
+      setPartidas(response);
+    } catch (error) {
+      console.error(error);
+      setError(error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -37,25 +36,38 @@ export function HomePage() {
         Partidas
       </Typography>
       {loading && <h3>Carregando partidas...</h3>}
-      {error && <h3> {error}</h3>}
+
+      {/* CORREÇÃO AQUI: Acessando .message para renderizar uma String válida */}
+      {error && (
+        <h3 className="text-red-500">
+          Erro: {error.message || 'Falha ao carregar partidas'}
+        </h3>
+      )}
 
       {partidas?.items?.map((game, g) => {
         return (
-          <div key={g} 
-          className={cn(
-            'bg-white',
-            'p-4',
-            'flex',
-            'flex-row',
-            'items-center',
-            'justify-between',
-            'shadow',
-            'rounded-md')}>
-            <Typography variant={'span'} asTag={'p'} className={cn('text-xs', 'font-semibold')}>
+          <div
+            key={g}
+            className={cn(
+              'bg-white',
+              'p-4',
+              'flex',
+              'flex-row',
+              'items-center',
+              'justify-between',
+              'shadow',
+              'rounded-md'
+            )}
+          >
+            <Typography
+              variant={'span'}
+              asTag={'p'}
+              className={cn('text-xs', 'font-semibold')}
+            >
               #{game.id}
             </Typography>
             <Typography variant={'h5'} asTag={'h5'}>
-               Status: {game?.status}
+              Status: {game?.status}
             </Typography>
             {game?.status !== 'FINISHED' && (
               <Link
@@ -63,19 +75,19 @@ export function HomePage() {
                 className={cn(
                   'px-4',
                   'py-2',
-                'bg-blue-500',
-                'text-white',
-                'rounded-md',
-                'hover:bg-blue-600',
-                'transition-colors')}
-                >
-              Ver Partida
-            </Link>
+                  'bg-blue-500',
+                  'text-white',
+                  'rounded-md',
+                  'hover:bg-blue-600',
+                  'transition-colors'
+                )}
+              >
+                Ver Partida
+              </Link>
             )}
           </div>
         );
       })}
-
     </div>
   );
 }

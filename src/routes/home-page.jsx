@@ -107,19 +107,19 @@ export function HomePage() {
                 </span>
               </div>
 
-              {/* MEIO: Painel Versus (Exibe fotos e nomes dos competidores) */}
+              {/* MEIO: Painel Versus (Corrigido para mapear turing_player e lovelace_player) */}
               <div className="flex items-center gap-6 my-2 md:my-0 bg-zinc-950/40 px-6 py-2 rounded-xl border border-zinc-800/60">
-                {/* Jogador 1 (Alinhado à direita) */}
+                {/* Jogador Turing (Alinhado à direita) */}
                 <div className="flex items-center gap-3 w-36 justify-end">
                   <span className="text-sm font-semibold truncate text-zinc-200">
-                    {game?.player1?.ai_player_name || 'Jogador 1'}
+                    {game?.turing_player?.ai_player_name || 'Turing Bot'}
                   </span>
                   <img
                     src={
-                      game?.player1?.ai_player_avatar ||
-                      'https://api.dicebear.com/7.x/bottts/svg?seed=p1'
+                      game?.turing_player?.ai_player_avatar ||
+                      'https://api.dicebear.com/7.x/bottts/svg?seed=turing'
                     }
-                    alt="Avatar P1"
+                    alt="Avatar Turing"
                     className="w-9 h-9 rounded-full border border-purple-500/40 bg-purple-950/20 object-cover"
                   />
                 </div>
@@ -129,18 +129,18 @@ export function HomePage() {
                   VS
                 </span>
 
-                {/* Jogador 2 (Alinhado à esquerda) */}
+                {/* Jogador Lovelace (Alinhado à esquerda) */}
                 <div className="flex items-center gap-3 w-36">
                   <img
                     src={
-                      game?.player2?.ai_player_avatar ||
-                      'https://api.dicebear.com/7.x/bottts/svg?seed=p2'
+                      game?.lovelace_player?.ai_player_avatar ||
+                      'https://api.dicebear.com/7.x/bottts/svg?seed=lovelace'
                     }
-                    alt="Avatar P2"
+                    alt="Avatar Lovelace"
                     className="w-9 h-9 rounded-full border border-fuchsia-500/40 bg-fuchsia-950/20 object-cover"
                   />
                   <span className="text-sm font-semibold truncate text-zinc-200">
-                    {game?.player2?.ai_player_name || 'Jogador 2'}
+                    {game?.lovelace_player?.ai_player_name || 'Lovelace Bot'}
                   </span>
                 </div>
               </div>

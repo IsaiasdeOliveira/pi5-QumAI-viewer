@@ -2,7 +2,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { registerPlayer } from '../api';
 import { cn } from '@core/helpers';
 import { useGameContext } from '../context/game-context';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export function PlayerRegisterForm() {
   const { player, setPlayer } = useGameContext();
@@ -43,6 +43,8 @@ export function PlayerRegisterForm() {
       const response = await registerPlayer({ ...dto });
       if (!response?.player_access_token)
         throw new Error('Resposta inesperada da API');
+
+      // Armazena a resposta completa contendo o id numérico!
       setPlayer(response);
 
       reset({
@@ -59,14 +61,25 @@ export function PlayerRegisterForm() {
   }
 
   return (
-    <div className="flex flex-col px-4 gap-4 bg-zinc-900 border border-purple-950 p-6 rounded-2xl max-w-lg mx-auto shadow-xl">
+    // MODIFICAÇÃO: Alterado de max-w-lg para max-w-4xl para alargar o formulário na tela
+    <div className="flex flex-col px-6 gap-5 bg-zinc-900 border border-purple-950/60 p-8 rounded-2xl max-w-4xl w-full mx-auto shadow-2xl backdrop-blur-md">
+      <div className="text-center mb-1">
+        <h2 className="text-xl font-extrabold tracking-wide text-zinc-100">
+          Configuração do Professor
+        </h2>
+        <p className="text-xs text-zinc-400 mt-1">
+          Sincronize sua Inteligência Artificial para habilitar as disputas na
+          Arena
+        </p>
+      </div>
+
       {/* ABAS ESTILO GAMER NO TOPO */}
-      <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+      <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800">
         <button
           type="button"
           onClick={() => setIsUsingToken(false)}
           className={cn(
-            'py-2 px-4 rounded-lg text-xs font-bold tracking-wide transition-all duration-200',
+            'py-2.5 px-4 rounded-lg text-xs font-bold tracking-wide transition-all duration-200',
             !isUsingToken
               ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-md'
               : 'text-zinc-400 hover:text-zinc-200'
@@ -78,7 +91,7 @@ export function PlayerRegisterForm() {
           type="button"
           onClick={() => setIsUsingToken(true)}
           className={cn(
-            'py-2 px-4 rounded-lg text-xs font-bold tracking-wide transition-all duration-200',
+            'py-2.5 px-4 rounded-lg text-xs font-bold tracking-wide transition-all duration-200',
             isUsingToken
               ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-md'
               : 'text-zinc-400 hover:text-zinc-200'
@@ -90,7 +103,7 @@ export function PlayerRegisterForm() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-3 text-white"
+        className="flex flex-col gap-4 text-white"
       >
         {isUsingToken && (
           <Controller
@@ -98,12 +111,12 @@ export function PlayerRegisterForm() {
             control={control}
             rules={{ required: 'O token é obrigatório' }}
             render={({ field }) => (
-              <div className="flex flex-col gap-1 bg-purple-950/20 p-3 rounded-xl border border-purple-500/20">
+              <div className="flex flex-col gap-1.5 bg-purple-950/20 p-4 rounded-xl border border-purple-500/20 shadow-[inset_0_0_10px_rgba(168,85,247,0.05)]">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-purple-400">
                   Chave do Token (Access Token)
                 </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm font-mono focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm font-mono text-purple-300 focus:border-purple-500 focus:outline-none"
                   type="text"
                   placeholder="Cole seu player_access_token aqui"
                   {...field}
@@ -118,19 +131,24 @@ export function PlayerRegisterForm() {
           />
         )}
 
-        {/* CAMPOS REUTILIZÁVEIS (Aparecem nos dois fluxos) */}
+        {/* COMPONENTES EM GRID: Organiza os campos em duas colunas no espaço expandido */}
         <div
-          className={cn('flex flex-col gap-3', isUsingToken && 'opacity-80')}
+          className={cn(
+            'grid grid-cols-1 md:grid-cols-2 gap-4',
+            isUsingToken && 'opacity-85'
+          )}
         >
           <Controller
             name="group_name"
             control={control}
             rules={{ required: 'Nome do grupo obrigatório' }}
             render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-400">Nome do Grupo</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-zinc-400">
+                  Nome do Grupo
+                </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
                   type="text"
                   {...field}
                 />
@@ -143,12 +161,12 @@ export function PlayerRegisterForm() {
             control={control}
             rules={{ required: 'Nome do jogador obrigatório' }}
             render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-400">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-zinc-400 font-sans">
                   Nome do Jogador (IA)
                 </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
                   type="text"
                   {...field}
                 />
@@ -160,25 +178,12 @@ export function PlayerRegisterForm() {
             name="ai_player_avatar"
             control={control}
             render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-400">URL do Avatar</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-zinc-400">
+                  URL do Avatar (Foto)
+                </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none"
-                  type="text"
-                  {...field}
-                />
-              </div>
-            )}
-          />
-
-          <Controller
-            name="ai_player_description"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-400">Descrição</label>
-                <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono"
                   type="text"
                   {...field}
                 />
@@ -191,30 +196,49 @@ export function PlayerRegisterForm() {
             control={control}
             rules={{ required: 'Endpoint obrigatório' }}
             render={({ field }) => (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-400">
-                  Endpoint de Movimento
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-zinc-400">
+                  Endpoint de Movimento (API da IA)
                 </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2 text-sm focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono"
                   type="text"
                   {...field}
                 />
               </div>
             )}
           />
+
+          <div className="md:col-span-2 flex flex-col gap-1.5">
+            <Controller
+              name="ai_player_description"
+              control={control}
+              render={({ field }) => (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-zinc-400">
+                    Descrição / Estratégia
+                  </label>
+                  <input
+                    className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
+                    type="text"
+                    {...field}
+                  />
+                </div>
+              )}
+            />
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-4 px-4 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white text-sm font-bold tracking-wide rounded-xl hover:brightness-110 shadow-lg transition-all active:scale-[0.98]"
+          className="mt-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white text-sm font-bold tracking-wide rounded-xl hover:brightness-110 shadow-lg transition-all active:scale-[0.99] w-full"
         >
           {isSubmitting
-            ? 'Processando...'
+            ? 'Processando com a Secretaria...'
             : isUsingToken
-              ? 'Injetar Token & Entrar'
-              : 'Cadastrar Novo Jogador'}
+              ? '🔑 Injetar Token & Sincronizar'
+              : '🤖 Cadastrar Novo Professor'}
         </button>
       </form>
     </div>

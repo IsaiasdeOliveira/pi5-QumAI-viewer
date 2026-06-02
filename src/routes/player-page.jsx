@@ -1,6 +1,6 @@
-import { useGameContext } from '../context/game-context';
-import { PlayerRegisterForm } from '../components/player-register-form';
-import { PlayerUpdateForm } from '../components/player-update-form';
+import { useGameContext } from '../feature/game/context/game-context';
+import { PlayerRegisterForm } from '../feature/game/components/player-register-form';
+import { PlayerUpdateForm } from '../feature/game/components/player-update-form';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
 import { useState } from 'react';
@@ -9,7 +9,7 @@ export function PlayerPage() {
   const { player, setPlayer } = useGameContext();
   const [copied, setCopied] = useState(false);
 
-  // ESTADO DO OLHINHO: Controla se o token aparece como 'password' ou 'text'
+  // ESTADO DO OLHINHO: Controla se o token aparece oculto ou visível na tela
   const [mostrarToken, setMostrarToken] = useState(false);
 
   // Função para copiar o token real para a área de transferência sem precisar revelá-lo
@@ -48,7 +48,7 @@ export function PlayerPage() {
           <PlayerRegisterForm />
         </div>
       ) : (
-        /* SE JÁ HOUVER JOGADOR, MOSTRA O CARD PREMIUM COM AS CORREÇÕES */
+        /* SE JÁ HOUVER JOGADOR, MOSTRA O CARD COMPACTO PREMIUM */
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full items-center">
           <div className="w-full bg-zinc-900 border border-purple-950 p-6 md:p-8 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-6 items-center md:items-start backdrop-blur-md relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600/5 rounded-full blur-3xl pointer-events-none" />
@@ -83,7 +83,7 @@ export function PlayerPage() {
                 </p>
               </div>
 
-              {/* BLOCO CENTRAL: EXIBE O PLAYER_ID NUMÉRICO CORRETO PARA O SWAGGER */}
+              {/* BLOCO CENTRAL: EXIBE O NÚMERO DO JOGADOR (ID NUMÉRICO) */}
               <div className="flex flex-col gap-2 bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/60 w-full md:max-w-xl font-mono text-xs">
                 <div className="flex justify-between items-center border-b border-zinc-900/60 pb-2">
                   <span className="text-zinc-500 font-sans font-medium">
@@ -107,7 +107,7 @@ export function PlayerPage() {
                 </div>
               </div>
 
-              {/* CHAVE DE ACESSO COM MÁSCARA DE SENHA E ÍCONE DO OLHINHO */}
+              {/* CHAVE DE ACESSO PROTEGIDA — CORRIGIDA CONTRA AUTOCOMPLETE DO CHROME */}
               <div className="flex flex-col gap-1.5 w-full md:max-w-xl text-left">
                 <label className="text-[10px] uppercase font-mono tracking-wider text-zinc-500 font-bold block">
                   🔑 Chave de Acesso Oculta (Access Token)
@@ -116,21 +116,24 @@ export function PlayerPage() {
                   {/* Container do input ocultável */}
                   <div className="relative flex-1 flex items-center">
                     <input
-                      type={mostrarToken ? 'text' : 'password'} // Alterna o tipo do input baseado no clique do olho
+                      type={mostrarToken ? 'text' : 'password'}
                       readOnly
+                      autoComplete="new-password" // CORREÇÃO: Impede o Chrome de autocompletar com senhas salvas
+                      name="player_secret_access_token_field" // Nome aleatório para despistar o navegador
                       value={player?.player_access_token || ''}
-                      className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg pl-4 pr-10 py-2 text-xs font-mono text-purple-300 focus:outline-none tracking-wide"
+                      // CORREÇÃO VISUAL: Estilos adicionados para remover o fundo amarelo/azul do autocomplete do Chrome
+                      className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg pl-4 pr-10 py-2 text-xs font-mono text-purple-300 focus:outline-none tracking-wide transition-colors [&:-webkit-autofill]:[--tw-text-opacity:1] [&:-webkit-autofill]:[WebkitTextFillColor:#d8b4fe] [&:-webkit-autofill]:[WebkitBoxShadow:0_0_0_50px_#09090b_inset]"
                     />
 
-                    {/* Botão de alternar visibilidade (Olhinho) */}
+                    {/* Botão Interativo do Olhinho */}
                     <button
                       type="button"
                       onClick={() => setMostrarToken(!mostrarToken)}
-                      className="absolute right-3 text-zinc-500 hover:text-purple-400 transition-colors"
+                      className="absolute right-3 text-zinc-500 hover:text-purple-400 transition-colors z-10"
                       title={mostrarToken ? 'Esconder Token' : 'Mostrar Token'}
                     >
                       {mostrarToken ? (
-                        /* Ícone de Olho Aberto */
+                        /* Ícone: Olho Aberto */
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
@@ -151,7 +154,7 @@ export function PlayerPage() {
                           />
                         </svg>
                       ) : (
-                        /* Ícone de Olho Fechado / Cortado */
+                        /* Ícone: Olho Fechado */
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
@@ -170,7 +173,7 @@ export function PlayerPage() {
                     </button>
                   </div>
 
-                  {/* Botão de Copiar (Lê o valor real mesmo mascarado) */}
+                  {/* Botão de Copiar */}
                   <button
                     type="button"
                     onClick={copiarTokenParaAreaDeTransferencia}
@@ -186,7 +189,7 @@ export function PlayerPage() {
                 </div>
               </div>
 
-              {/* ATUALIZAR ROTA OU DESCONECTAR */}
+              {/* RE-ATUALIZAR ENDPOINT E DISCONNECT */}
               <div className="flex flex-wrap gap-3 mt-2 justify-center md:justify-start w-full">
                 <div className="w-full md:max-w-xl bg-zinc-950/20 p-4 rounded-xl border border-zinc-800/40">
                   <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide block mb-2 text-left">

@@ -8,16 +8,14 @@ export function PlayerRegisterForm() {
   const { player, setPlayer } = useGameContext();
   const [isUsingToken, setIsUsingToken] = useState(false);
 
+  // 1. Correção: defaultValues agora usam strings vazias como fallback
   const form = useForm({
     defaultValues: {
-      ai_player_name: player?.ai_player_name || 'Meu Jogador',
-      ai_player_avatar:
-        player?.ai_player_avatar || 'https://example.com/avatar.png',
-      group_name: player?.group_name || 'Meu Grupo',
-      ai_player_description:
-        player?.ai_player_description || 'Descrição do meu jogador de IA',
-      ai_player_move_endpoint:
-        player?.ai_player_move_endpoint || 'https://example.com/move-endpoint',
+      ai_player_name: player?.ai_player_name || '',
+      ai_player_avatar: player?.ai_player_avatar || '',
+      group_name: player?.group_name || '',
+      ai_player_description: player?.ai_player_description || '',
+      ai_player_move_endpoint: player?.ai_player_move_endpoint || '',
       existing_token: '',
     },
   });
@@ -44,7 +42,6 @@ export function PlayerRegisterForm() {
       if (!response?.player_access_token)
         throw new Error('Resposta inesperada da API');
 
-      // Armazena a resposta completa contendo o id numérico!
       setPlayer(response);
 
       reset({
@@ -61,19 +58,16 @@ export function PlayerRegisterForm() {
   }
 
   return (
-    // MODIFICAÇÃO: Alterado de max-w-lg para max-w-4xl para alargar o formulário na tela
     <div className="flex flex-col px-6 gap-5 bg-zinc-900 border border-purple-950/60 p-8 rounded-2xl max-w-4xl w-full mx-auto shadow-2xl backdrop-blur-md">
       <div className="text-center mb-1">
         <h2 className="text-xl font-extrabold tracking-wide text-zinc-100">
           Configuração do Professor
         </h2>
         <p className="text-xs text-zinc-400 mt-1">
-          Sincronize sua Inteligência Artificial para habilitar as disputas na
-          Arena
+          Sincronize sua Inteligência Artificial para habilitar as disputas na Arena
         </p>
       </div>
 
-      {/* ABAS ESTILO GAMER NO TOPO */}
       <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800">
         <button
           type="button"
@@ -101,10 +95,7 @@ export function PlayerRegisterForm() {
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col gap-4 text-white"
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 text-white">
         {isUsingToken && (
           <Controller
             name="existing_token"
@@ -116,7 +107,7 @@ export function PlayerRegisterForm() {
                   Chave do Token (Access Token)
                 </label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm font-mono text-purple-300 focus:border-purple-500 focus:outline-none"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm font-mono text-purple-300 focus:border-purple-500 focus:outline-none placeholder:text-zinc-600"
                   type="text"
                   placeholder="Cole seu player_access_token aqui"
                   {...field}
@@ -131,25 +122,19 @@ export function PlayerRegisterForm() {
           />
         )}
 
-        {/* COMPONENTES EM GRID: Organiza os campos em duas colunas no espaço expandido */}
-        <div
-          className={cn(
-            'grid grid-cols-1 md:grid-cols-2 gap-4',
-            isUsingToken && 'opacity-85'
-          )}
-        >
+        <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', isUsingToken && 'opacity-85')}>
+          {/* 2. Correção: Inclusão dos placeholders e remoção do texto no defaultValues */}
           <Controller
             name="group_name"
             control={control}
             rules={{ required: 'Nome do grupo obrigatório' }}
             render={({ field }) => (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-400">
-                  Nome do Grupo
-                </label>
+                <label className="text-xs font-semibold text-zinc-400">Nome do Grupo</label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200 placeholder:text-zinc-600"
                   type="text"
+                  placeholder="Meu Grupo"
                   {...field}
                 />
               </div>
@@ -162,12 +147,11 @@ export function PlayerRegisterForm() {
             rules={{ required: 'Nome do jogador obrigatório' }}
             render={({ field }) => (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-400 font-sans">
-                  Nome do Jogador (IA)
-                </label>
+                <label className="text-xs font-semibold text-zinc-400 font-sans">Nome do Jogador (IA)</label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200 placeholder:text-zinc-600"
                   type="text"
+                  placeholder="Meu Jogador"
                   {...field}
                 />
               </div>
@@ -179,12 +163,11 @@ export function PlayerRegisterForm() {
             control={control}
             render={({ field }) => (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-400">
-                  URL do Avatar (Foto)
-                </label>
+                <label className="text-xs font-semibold text-zinc-400">URL do Avatar (Foto)</label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono placeholder:text-zinc-600"
                   type="text"
+                  placeholder="https://example.com/avatar.png"
                   {...field}
                 />
               </div>
@@ -197,12 +180,11 @@ export function PlayerRegisterForm() {
             rules={{ required: 'Endpoint obrigatório' }}
             render={({ field }) => (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-400">
-                  Endpoint de Movimento (API da IA)
-                </label>
+                <label className="text-xs font-semibold text-zinc-400">Endpoint de Movimento (API da IA)</label>
                 <input
-                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono"
+                  className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-300 font-mono placeholder:text-zinc-600"
                   type="text"
+                  placeholder="https://example.com/move-endpoint"
                   {...field}
                 />
               </div>
@@ -215,12 +197,11 @@ export function PlayerRegisterForm() {
               control={control}
               render={({ field }) => (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-zinc-400">
-                    Descrição / Estratégia
-                  </label>
+                  <label className="text-xs font-semibold text-zinc-400">Descrição / Estratégia</label>
                   <input
-                    className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200"
+                    className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 py-2.5 text-sm focus:border-purple-500 focus:outline-none text-zinc-200 placeholder:text-zinc-600"
                     type="text"
+                    placeholder="Descrição do meu jogador de IA"
                     {...field}
                   />
                 </div>

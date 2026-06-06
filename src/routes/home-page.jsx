@@ -9,10 +9,23 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Estado para gerenciar a página atual
+  const [page, setPage] = useState(1);
+
+  // Estado para gerenciar o filtro de status (null = Todas, 'PLAYING' = Jogando, 'PAUSED' = Pausado, 'FINISHED' = Finalizadas)
+  const [statusFiltro, setStatusFiltro] = useState(null);
+
   async function buscarPartidas() {
-    setLoading(true);
     try {
-      const response = await listGames();
+      // Montamos o objeto de busca padrão
+      const dto = { page: page, page_size: 20 };
+
+      // Se houver um filtro selecionado, adicionamos no envio da API
+      if (statusFiltro) {
+        dto.status = statusFiltro;
+      }
+
+      const response = await listGames(dto);
       setPartidas(response);
     } catch (error) {
       console.error(error);
@@ -22,9 +35,22 @@ export function HomePage() {
     }
   }
 
+  // O atualizador agora observa se a página OU o filtro mudaram
   useEffect(() => {
     buscarPartidas();
-  }, []);
+
+    const atualizadorHome = setInterval(() => {
+      buscarPartidas();
+    }, 4000);
+
+    return () => clearInterval(atualizadorHome);
+  }, [page, statusFiltro]);
+
+  // Função auxiliar para mudar o filtro e resetar para a página 1
+  function alterarFiltro(novoStatus) {
+    setStatusFiltro(novoStatus);
+    setPage(1);
+  }
 
   return (
     <div
@@ -44,8 +70,59 @@ export function HomePage() {
           Partidas
         </Typography>
         <span className="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-full font-mono">
-          {partidas?.items?.length || 0} Arenas
+          {partidas?.items?.length || 0} Arenas filtradas
         </span>
+      </div>
+
+      {/* Painel de Botões de Filtro Estilizados */}
+      <div className="flex flex-wrap gap-3 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/40 max-w-md">
+        <button
+          onClick={() => alterarFiltro(null)}
+          className={cn(
+            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+            statusFiltro === null
+              ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+          )}
+        >
+          🔍 Todas
+        </button>
+
+        <button
+          onClick={() => alterarFiltro('PLAYING')}
+          className={cn(
+            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+            statusFiltro === 'PLAYING'
+              ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.2)] font-black'
+              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-green-500/70'
+          )}
+        >
+          ● Jogando
+        </button>
+
+        <button
+          onClick={() => alterarFiltro('PAUSED')}
+          className={cn(
+            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+            statusFiltro === 'PAUSED'
+              ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] font-black'
+              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-amber-500/70'
+          )}
+        >
+          ⏸ Pausado
+        </button>
+
+        <button
+          onClick={() => alterarFiltro('FINISHED')}
+          className={cn(
+            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+            statusFiltro === 'FINISHED'
+              ? 'bg-zinc-800 border-zinc-700 text-zinc-200'
+              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-300'
+          )}
+        >
+          🏁 Finalizadas
+        </button>
       </div>
 
       {loading && (
@@ -66,7 +143,18 @@ export function HomePage() {
       <div className="grid grid-cols-1 gap-4">
         {partidas?.items?.map((game, g) => {
           const isFinished = game?.status === 'FINISHED';
-          const isRunning = game?.status === 'RUNNING';
+          const isPlaying = game?.status === 'PLAYING';
+          const isPaused = game?.status === 'PAUSED';
+
+          const dataBruta = game?.started_at || game?.created_at;
+          const dataFormatada = dataBruta
+            ? new Date(dataBruta).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : 'Horário Indefinido';
 
           return (
             <div
@@ -78,7 +166,7 @@ export function HomePage() {
                 'hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]'
               )}
             >
-              {/* LADO ESQUERDO: Identificador e Tag de Status */}
+              {/* LADO ESQUERDO: Identificador, Tag de Status e Horário */}
               <div className="flex flex-col gap-1 items-center md:items-start">
                 <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
                   Match ID
@@ -91,25 +179,40 @@ export function HomePage() {
                   #{game.id?.slice(0, 8) || game.id}
                 </Typography>
 
-                {/* Badge de Status estilizada */}
+                {/* Badge de Status Atualizada */}
                 <span
                   className={cn(
                     'mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border',
-                    isRunning &&
+                    isPlaying &&
                       'bg-green-500/10 text-green-400 border-green-500/30 animate-pulse',
+                    isPaused &&
+                      'bg-amber-500/10 text-amber-400 border-amber-500/30',
                     isFinished && 'bg-zinc-800 text-zinc-400 border-zinc-700',
-                    !isRunning &&
+                    !isPlaying &&
+                      !isPaused &&
                       !isFinished &&
-                      'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      'bg-zinc-800/50 text-zinc-500 border-zinc-800'
                   )}
                 >
-                  {isRunning ? '● AO VIVO' : game?.status}
+                  {isPlaying
+                    ? '● JOGANDO'
+                    : isPaused
+                      ? '⏸ PAUSADO'
+                      : game?.status}
+                </span>
+
+                <span className="text-[10px] text-zinc-400 font-mono mt-2 flex items-center gap-1 bg-zinc-950/40 px-2 py-0.5 rounded border border-zinc-800/40">
+                  📅 {dataFormatada}
                 </span>
               </div>
 
-              {/* MEIO: Painel Versus (Corrigido para mapear turing_player e lovelace_player) */}
-              <div className="flex items-center gap-6 my-2 md:my-0 bg-zinc-950/40 px-6 py-2 rounded-xl border border-zinc-800/60">
-                {/* Jogador Turing (Alinhado à direita) */}
+              {/* MEIO: Painel Versus */}
+              <div className="flex items-center gap-6 my-2 md:my-0 bg-zinc-950/40 px-6 py-2 rounded-xl border border-zinc-800/60 relative">
+                <span className="absolute -top-2 left-4 text-[8px] font-mono bg-purple-900/60 border border-purple-500/30 px-1 rounded text-purple-300 font-bold uppercase tracking-tight">
+                  Criador da Sala
+                </span>
+
+                {/* Jogador Turing */}
                 <div className="flex items-center gap-3 w-36 justify-end">
                   <span className="text-sm font-semibold truncate text-zinc-200">
                     {game?.turing_player?.ai_player_name || 'Turing Bot'}
@@ -124,12 +227,12 @@ export function HomePage() {
                   />
                 </div>
 
-                {/* Divisor "VS" estilizado */}
+                {/* Divisor "VS" */}
                 <span className="text-xs font-black text-purple-500/60 italic font-mono bg-purple-500/5 px-2 py-1 rounded border border-purple-500/10">
                   VS
                 </span>
 
-                {/* Jogador Lovelace (Alinhado à esquerda) */}
+                {/* Jogador Lovelace */}
                 <div className="flex items-center gap-3 w-36">
                   <img
                     src={
@@ -145,7 +248,7 @@ export function HomePage() {
                 </div>
               </div>
 
-              {/* LADO DIREITO: Botão de Ação Inteligente */}
+              {/* LADO DIREITO: Botão de Ação */}
               <div className="w-full md:w-auto">
                 <Link
                   to={
@@ -166,6 +269,29 @@ export function HomePage() {
             </div>
           );
         })}
+      </div>
+
+      {/* BOTÕES DE PAGINAÇÃO */}
+      <div className="flex justify-center items-center gap-6 mt-8 border-t border-purple-500/10 pt-6">
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-5 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 disabled:opacity-30 transition-all font-bold cursor-pointer disabled:cursor-not-allowed"
+        >
+          &larr; Página Anterior
+        </button>
+
+        <span className="text-purple-400 font-mono font-bold bg-purple-900/20 px-4 py-2 rounded-md border border-purple-500/30">
+          Página {page}
+        </span>
+
+        <button
+          onClick={() => setPage((p) => p + 1)}
+          disabled={!partidas?.items || partidas.items.length < 20}
+          className="px-5 py-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-lg hover:brightness-110 shadow-[0_4px_12px_rgba(168,85,247,0.3)] transition-all font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          Próxima Página &rarr;
+        </button>
       </div>
     </div>
   );

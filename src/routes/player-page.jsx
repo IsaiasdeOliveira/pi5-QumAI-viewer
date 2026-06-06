@@ -22,7 +22,7 @@ export function PlayerPage() {
   }
 
   // Função para desconectar o jogador atual
-  function deslogarProfessor() {
+  function deslogarJogador() {
     setPlayer(null);
   }
 
@@ -38,7 +38,7 @@ export function PlayerPage() {
           asTag={'h1'}
           className="text-2xl font-black text-zinc-100 tracking-wide mt-0.5"
         >
-          {player ? 'Seu Perfil de Elite' : 'Registro de Professor'}
+          {player ? 'Seu Perfil de Elite' : 'Registro de Jogador de IA'}
         </Typography>
       </div>
 
@@ -200,10 +200,10 @@ export function PlayerPage() {
 
                 <button
                   type="button"
-                  onClick={deslogarProfessor}
+                  onClick={deslogarJogador}
                   className="mt-2 px-4 py-2 border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 text-xs font-bold rounded-lg transition-all active:scale-95"
                 >
-                  🚪 Desconectar Professor / Trocar de Conta
+                  🚪 Desconectar Jogador / Trocar de Conta
                 </button>
               </div>
             </div>

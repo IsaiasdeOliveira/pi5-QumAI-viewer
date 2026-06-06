@@ -59,12 +59,18 @@ export function RootMenu() {
             <button
               type="button"
               className={cn(
-                'text-lg',
-                'p-2 px-4',
-                'bg-red-500',
-                'hover:bg-red-700',
-                'transition-all',
-                'ml-auto'
+                'px-4 py-1.5',
+                'bg-zinc-950/80',
+                'border border-red-500/20',
+                'text-red-400',
+                'hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-300',
+                'rounded-lg',
+                'text-xs font-mono font-bold',
+                'transition-all duration-200',
+                'shadow-[0_0_10px_rgba(239,68,68,0.05)]',
+                'active:scale-95',
+                'flex items-center gap-2',
+                'ml-auto' // Mantém o botão alinhado à direita no seu menu
               )}
               onClick={() => {
                 logout();
@@ -73,7 +79,10 @@ export function RootMenu() {
                 });
               }}
             >
-              Sair ({player.ai_player_name})
+              🚪 Sair{' '}
+              <span className="opacity-60 text-[10px]">
+                ({player.ai_player_name})
+              </span>
             </button>
           )}
         </nav>

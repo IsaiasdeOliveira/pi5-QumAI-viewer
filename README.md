@@ -1,57 +1,47 @@
-# PI5 - Vite Frontend Starter
+# QumAI - Arena Viewer (Frontend)
 
-> Repositório com um scaffolding básico para construir o front-end do projeto do PI5: Aplicações de Inteligência Artificial, do prof. Guilherme Rey.
+Este repositório contém a aplicação de interface gráfica (Frontend) do projeto **QumAI**, desenvolvida para o campeonato da disciplina de Projeto Integrador V. 
 
-## Requisitos
+O objetivo desta aplicação é consumir a API central do campeonato e fornecer um painel de controle interativo, permitindo o registro de jogadores inteligentes, o gerenciamento de credenciais de acesso (Tokens) e a visualização em tempo real das partidas.
 
-- Node.js `v22` ou maior
+## Tecnologias Utilizadas
 
-## Dependências
+A aplicação foi projetada para ser leve, reativa e de rápida renderização, utilizando o seguinte ecossistema:
 
-- Vite
-- React
-- TypeScript
-- React Router
-- Tailwind
+* **React (JS):** Biblioteca principal para a construção da interface baseada em componentes.
+* **Vite:** *Bundler* de alta performance utilizado para otimização do ambiente de desenvolvimento e construção do *build* de produção.
+* **CSS/Estilização:** Abordagem modular para isolamento de estilos, garantindo um tema escuro (*Dark Mode*) de alto contraste adequado para o painel da Arena.
+* **Fetch API:** Camada de requisições nativa para comunicação assíncrona com os endpoints REST da Arena.
 
-## Organização deste repositório
+## Arquitetura e Estrutura de Diretórios
 
-O projeto foi organizado de modo que vocês possam importar módulos utilizando aliases, para facilitar (e diminuir o uso de caminhos relativos), sendo:
+O projeto segue uma arquitetura modularizada, separando claramente as responsabilidades de roteamento, componentes visuais e lógica de integração:
 
-| Pasta         |    Alias     | Descrição                                       |
-| :------------ | :----------: | :---------------------------------------------- |
-| `public`      |     `--`     | Contém assets e itens acessíveis via URL direta |
-| `src/assets`  | `@assets/*`  | Assets de dados e outros para importação direta |
-| `src/core`    |  `@core/*`   | Componentes, helpers, modelos e tipos globais   |
-| `src/feature` | `@feature/*` | Módulos da aplicação, encapsulados em features  |
-| `src/routes`  | `@routes/*`  | Páginas equivalente às rotas da sua app         |
-| `src/styles`  | `@styles/*`  | Folhas de estilo                                |
-| `src/ui`      |   `@ui/*`    | Componentes genéricos de interface              |
+* `/src/components`: Contém os componentes globais e reutilizáveis da aplicação (ex: `root-layout.jsx`, `root-menu.jsx`).
+* `/src/feature/game`: Agrupa os componentes e a lógica de estado específicos para a visualização das partidas e interação com o tabuleiro.
+* `/src/routes`: Define as rotas principais de navegação da aplicação (Home, Sobre, Jogador).
+* `/src/helpers` & `/src/constants`: Funções utilitárias e constantes globais.
+* `/src/styles` & `/src/ui`: Definições visuais e elementos de interface primitivos.
 
-## Como executar
+## Funcionalidades Principais
 
-- Clone o projeto OU crie um novo projeto à partir deste usando `tiged`:
-  ```
-  npx tiged https://github.com/Yarquen/pi5-frontend-scaffolding [nome-do-projeto] --mode=git
-  ```
-- Instale as dependências com o seu package manager de preferência:
-  ```sh
-  npm install
-  # OU
-  pnpm install
-  # OU
-  yarn install
-  # OU
-  bun install
-  ```
-- Execute o projeto:
-  ```sh
-  npm run dev
-  # OU
-  pnpm run dev
-  # OU
-  yarn dev
-  # OU
-  bun dev
-  ```
-- O projeto será executado em [`https://localhost:5173`](https://localhost:5173)
+A interface atende a todos os requisitos de visualização e controle do campeonato:
+
+1. **Gestão de Identidade (Painel do Jogador):**
+   * Interface para cadastro de novos agentes lógicos (IA) na API do professor.
+   * Sistema de sincronização e atualização dinâmica do *Endpoint de Movimento* da IA (ex: configuração da rota `/move` da API Python do QumAI).
+   * Armazenamento seguro de sessão via integração com o *Local Storage* para o *Access Token* JWT.
+
+2. **Arena e Visualização de Partidas (Home):**
+   * Listagem de todas as partidas registradas no servidor do campeonato.
+   * Exibição do status em tempo real de cada embate (`FINISHED`, `WAITING_PLAYERS`, etc.).
+   * Injeção dinâmica de cabeçalhos de autorização (`Bearer Token`) para acessar rotas protegidas e consumir os dados do torneio sem bloqueios de CORS ou erros de 401 Unauthorized.
+
+## Como Executar o Projeto Localmente
+
+Para iniciar o visualizador da Arena em sua máquina, certifique-se de ter o Node.js instalado e siga os passos:
+
+1. Clone o repositório.
+2. Na raiz do projeto, instale as dependências:
+   ```bash
+   npm install

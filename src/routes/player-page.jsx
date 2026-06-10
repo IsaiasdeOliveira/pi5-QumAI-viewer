@@ -31,14 +31,14 @@ export function PlayerPage() {
       {/* CABEÇALHO */}
       <div className="flex flex-col gap-1 border-b border-purple-500/10 pb-4 max-w-4xl mx-auto w-full">
         <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold">
-          Painel de Controle de Inteligência Artificial
+          Painel do Jogador de IA
         </span>
         <Typography
           variant={'h1'}
           asTag={'h1'}
           className="text-2xl font-black text-zinc-100 tracking-wide mt-0.5"
         >
-          {player ? 'Seu Perfil de Elite' : 'Registro de Jogador de IA'}
+          {player ? 'Seu Perfil ' : 'Registro de Jogador de IA'}
         </Typography>
       </div>
 

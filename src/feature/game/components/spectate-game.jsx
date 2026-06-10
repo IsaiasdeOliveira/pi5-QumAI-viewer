@@ -36,7 +36,7 @@ export function SpectateGame({ gameId }) {
               variant={'h3'}
               className="text-3xl font-black text-zinc-100 tracking-wide mt-1"
             >
-              📺 Homologação de Espectador
+              Homologação de Espectador
             </Typography>
           </div>
 
@@ -45,7 +45,7 @@ export function SpectateGame({ gameId }) {
             className="text-sm md:text-base text-zinc-400 leading-relaxed font-sans max-w-2xl"
           >
             Para assistir a esta partida tática em tempo real, você precisa se
-            registrar na secretaria da arena. O formulário abaixo gerará seu
+            registrar como espectador da partida. O formulário abaixo gerará seu
             token de acesso criptografado de transmissão.
           </Typography>
 

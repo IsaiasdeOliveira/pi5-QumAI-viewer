@@ -7,14 +7,12 @@ import { cn } from '@core/helpers';
 export function RootLayout() {
   return (
     <div
-      // CORREÇÃO: Mudamos 'bg-gray-100' para 'bg-zinc-950' para matar o fundo branco no site todo
       className={cn(
         'w-dvw min-h-dvh',
         'flex flex-col gap-0',
         'bg-zinc-900/50 text-white antialiased'
       )}
     >
-      {/* HEADER: Mudado para um visual escuro moderno com bordinha roxa neon sutil */}
       <header
         id={'site-header'}
         className={cn(
@@ -23,13 +21,12 @@ export function RootLayout() {
       >
         <Container className={cn('p-4 flex items-center justify-between')}>
           <div className="flex items-center gap-3">
-            {/* Nome oficial bonitão com degradê */}
             <Typography
               variant={'h1'}
               asTag={'h1'}
               className="text-2xl font-black tracking-widest bg-gradient-to-r from-purple-400 to-fuchsia-500 bg-clip-text text-transparent uppercase font-mono"
             >
-              Quma AI Arena
+              Quma AI
             </Typography>
             {/* Badge do projeto */}
             <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20 font-mono font-bold tracking-wider">

@@ -15,6 +15,9 @@ export function HomePage() {
   // Estado para gerenciar o filtro de status (null = Todas, 'PLAYING' = Jogando, 'PAUSED' = Pausado, 'FINISHED' = Finalizadas)
   const [statusFiltro, setStatusFiltro] = useState(null);
 
+  // 🔥 1. NOVO ESTADO: Guarda o texto que você digita para buscar o jogador
+  const [busca, setBusca] = useState('');
+
   async function buscarPartidas() {
     try {
       // Montamos o objeto de busca padrão
@@ -52,6 +55,29 @@ export function HomePage() {
     setPage(1);
   }
 
+  // 🔥 2. LÓGICA DO FILTRO: Filtra as partidas pelo nome que você digitou
+  const partidasFiltradas =
+    partidas?.items?.filter((game) => {
+      const termo = busca.toLowerCase().trim();
+
+      // Se o campo de busca estiver vazio, mostra todas as partidas do servidor
+      if (!termo) return true;
+
+      // Pega o nome do time Turing e Lovelace (puxado exatamente da estrutura do seu card)
+      const nomeTuring =
+        game?.turing_player?.ai_player_name?.toLowerCase() || '';
+      const nomeLovelace =
+        game?.lovelace_player?.ai_player_name?.toLowerCase() || '';
+      const matchId = game?.id?.toLowerCase() || '';
+
+      // Retorna a partida se o termo digitado bater com o robô 1, robô 2 ou com o ID da partida
+      return (
+        nomeTuring.includes(termo) ||
+        nomeLovelace.includes(termo) ||
+        matchId.includes(termo)
+      );
+    }) || [];
+
   return (
     <div
       className={cn(
@@ -70,64 +96,82 @@ export function HomePage() {
           Partidas
         </Typography>
         <span className="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-full font-mono">
-          {partidas?.items?.length || 0} Arenas filtradas
+          {partidasFiltradas.length} Partidas exibidas
         </span>
       </div>
 
-      {/* Painel de Botões de Filtro Estilizados */}
-      <div className="flex flex-wrap gap-3 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/40 max-w-md">
-        <button
-          onClick={() => alterarFiltro(null)}
-          className={cn(
-            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
-            statusFiltro === null
-              ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
-              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
-          )}
-        >
-          🔍 Todas
-        </button>
+      {/* Container dos Filtros (Botões + Barra de Busca lado a lado/empilhados) */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        {/* Painel de Botões de Filtro Estilizados */}
+        <div className="flex flex-wrap gap-3 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/40 max-w-md w-full md:w-auto">
+          <button
+            onClick={() => alterarFiltro(null)}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+              statusFiltro === null
+                ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            )}
+          >
+            🔍 Todas
+          </button>
 
-        <button
-          onClick={() => alterarFiltro('PLAYING')}
-          className={cn(
-            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
-            statusFiltro === 'PLAYING'
-              ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.2)] font-black'
-              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-green-500/70'
-          )}
-        >
-          ● Jogando
-        </button>
+          <button
+            onClick={() => alterarFiltro('PLAYING')}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+              statusFiltro === 'PLAYING'
+                ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.2)] font-black'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-green-500/70'
+            )}
+          >
+            ● Jogando
+          </button>
 
-        <button
-          onClick={() => alterarFiltro('PAUSED')}
-          className={cn(
-            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
-            statusFiltro === 'PAUSED'
-              ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] font-black'
-              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-amber-500/70'
-          )}
-        >
-          ⏸ Pausado
-        </button>
+          <button
+            onClick={() => alterarFiltro('PAUSED')}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+              statusFiltro === 'PAUSED'
+                ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] font-black'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-amber-500/70'
+            )}
+          >
+            ⏸ Pausado
+          </button>
 
-        <button
-          onClick={() => alterarFiltro('FINISHED')}
-          className={cn(
-            'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
-            statusFiltro === 'FINISHED'
-              ? 'bg-zinc-800 border-zinc-700 text-zinc-200'
-              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-300'
-          )}
-        >
-          🏁 Finalizadas
-        </button>
+          <button
+            onClick={() => alterarFiltro('FINISHED')}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border font-mono cursor-pointer',
+              statusFiltro === 'FINISHED'
+                ? 'bg-zinc-800 border-zinc-700 text-zinc-200'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-300'
+            )}
+          >
+            🏁 Finalizadas
+          </button>
+        </div>
+
+        {/* 🔥 3. NOVO INPUT VISUAL: Barra de pesquisa estilizada em sintonia com o tema neon */}
+        <div className="w-full md:w-80">
+          <input
+            type="text"
+            placeholder="🔍 Filtrar por Jogador ou ID..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className={cn(
+              'w-full px-4 py-2 text-sm font-mono rounded-xl border transition-all duration-200 outline-none',
+              'bg-zinc-950 border-zinc-800 text-zinc-200',
+              'placeholder-zinc-500 focus:border-purple-500/60 focus:shadow-[0_0_12px_rgba(168,85,247,0.15)]'
+            )}
+          />
+        </div>
       </div>
 
       {loading && (
         <div className="text-center py-12 text-purple-400 font-medium animate-pulse">
-          Carregando arenas do servidor...
+          Carregando partidas do servidor...
         </div>
       )}
 
@@ -141,7 +185,8 @@ export function HomePage() {
 
       {/* Grid de Confrontos */}
       <div className="grid grid-cols-1 gap-4">
-        {partidas?.items?.map((game, g) => {
+        {/* 🔥 4. MUDANÇA AQUI: Agora fazemos o map na lista filtrada locais! */}
+        {partidasFiltradas.map((game, g) => {
           const isFinished = game?.status === 'FINISHED';
           const isPlaying = game?.status === 'PLAYING';
           const isPaused = game?.status === 'PAUSED';

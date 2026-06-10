@@ -73,14 +73,14 @@ export function GameDetailsPage() {
           to="/"
           className="text-xs text-purple-400 hover:text-purple-300 font-mono"
         >
-          ← Voltar para as Arenas
+          ← Voltar para a Arena de Partidas.
         </Link>
       </div>
 
       {/* 1. PAINEL DO VENCEDOR */}
       <div className="bg-gradient-to-r from-purple-950/40 via-fuchsia-900/30 to-purple-950/40 border border-amber-500/40 p-6 rounded-2xl text-center shadow-[0_0_30px_rgba(245,158,11,0.1)]">
         <span className="text-amber-400 font-bold tracking-widest text-xs uppercase block mb-1">
-          🏆 Professor Campeão (Formou Primeiro!)
+          🏆 Jogador Campeão (Formou Primeiro!)
         </span>
         <div className="flex justify-center items-center gap-4 my-2">
           <img
@@ -199,7 +199,7 @@ export function GameDetailsPage() {
           asTag={'h4'}
           className="text-xs font-bold uppercase tracking-wider text-purple-400 font-mono"
         >
-          📋 Estado de Encerramento das Salas (Grade Escolar)
+          Estado de Encerramento da Partida
         </Typography>
 
         <div className="grid grid-cols-5 gap-3 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/60 max-w-3xl">

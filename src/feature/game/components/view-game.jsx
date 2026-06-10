@@ -3,6 +3,7 @@ import { useGameSocket } from '../hooks/useGameSocket';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
 import { useNavigate } from 'react-router-dom'; // 1. Hook de navegação adicionado
+import { useEffect, useState } from 'react';
 
 export function ViewGame({ gameId }) {
   const { spectator } = useGameContext();

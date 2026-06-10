@@ -2,15 +2,7 @@ import { useGameContext } from '../context/game-context';
 import { useGameSocket } from '../hooks/useGameSocket';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
-<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom'; // 1. Hook de navegação adicionado
-=======
-
-import { useNavigate } from 'react-router-dom'; // 1. Hook de navegação adicionado
-
-import { apiClient } from '@core/helpers/fetch';
-import { useEffect, useState } from 'react';
->>>>>>> ba770de3a45a7f204344eba576f72b62e497c254
 
 export function ViewGame({ gameId }) {
   const { spectator } = useGameContext();

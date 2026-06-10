@@ -2,9 +2,12 @@ import { useGameContext } from '../context/game-context';
 import { useGameSocket } from '../hooks/useGameSocket';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
+import { useNavigate } from 'react-router-dom'; // 1. Hook de navegação adicionado
 
 export function ViewGame({ gameId }) {
   const { spectator } = useGameContext();
+  const navigate = useNavigate(); // 2. Instância de navegação
+  
   const { connected, gameState } = useGameSocket(
     gameId,
     spectator?.[gameId]?.spectator_access_token || null
@@ -43,8 +46,19 @@ export function ViewGame({ gameId }) {
           </span>
         </div>
 
-        {/* STATUS DA CONEXÃO */}
+        {/* STATUS DA CONEXÃO & BOTÃO DE DETALHES */}
         <div className="flex items-center gap-3">
+          
+          {/* 3. Renderização Condicional do Botão (Aparece apenas quando FINISHED) */}
+          {statusPartida === 'FINISHED' && (
+            <button
+              onClick={() => navigate(`/game-details/${gameId}`)}
+              className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] animate-pulse hover:animate-none border border-purple-400"
+            >
+              Ver Detalhes da Partida
+            </button>
+          )}
+
           <div className="flex items-center gap-2 bg-zinc-900 px-3 py-1.5 rounded-xl border border-zinc-800">
             <span className={cn('w-2 h-2 rounded-full', connected ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-amber-500 animate-pulse')} />
             <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold">

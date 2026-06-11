@@ -12,7 +12,7 @@ export function ViewGame({ gameId }) {
 
   const tokenEspectador = spectator?.[gameId]?.spectator_access_token || null;
 
-  // 📡 Fonte de Verdade Principal (Socket ao vivo)
+  //  Fonte de Verdade Principal (Socket ao vivo)
   const { connected, gameState } = useGameSocket(gameId, tokenEspectador);
 
   const [historicoHttp, setHistoricoHttp] = useState([]);
@@ -67,7 +67,7 @@ export function ViewGame({ gameId }) {
     [];
 
   // =========================================================================
-  // 🎯 CAPTURA E FORMATAÇÃO DE IDs E NOMES (Anti-Bug de Servidor)
+  //  CAPTURA E FORMATAÇÃO DE IDs E NOMES (Anti-Bug de Servidor)
   // =========================================================================
   const turingPlayer =
     gameState?.turing_player || gameState?.player_1 || gameState?.player1;
@@ -146,7 +146,7 @@ export function ViewGame({ gameId }) {
   const timeDaVez = gameState?.current_turn_team_id ?? gameState?.current_turn;
 
   // =========================================================================
-  // 🧭 MAPEAMENTO DE PROFESSORES
+  //  MAPEAMENTO DE PROFESSORES
   // =========================================================================
   const professorTeams = { CLARO: 1, REY: 1, KARIN: 2, BEATRIZ: 2 };
 

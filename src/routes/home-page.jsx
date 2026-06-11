@@ -44,7 +44,7 @@ export function HomePage() {
 
     const atualizadorHome = setInterval(() => {
       buscarPartidas();
-    }, 200);
+    }, 500);
 
     return () => clearInterval(atualizadorHome);
   }, [page, statusFiltro]);

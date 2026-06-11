@@ -3,150 +3,152 @@ import { useGameSocket } from '../hooks/useGameSocket';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '@core/helpers/fetch';
 import { useEffect, useState } from 'react';
 
 export function ViewGame({ gameId }) {
   const { spectator } = useGameContext();
   const navigate = useNavigate();
 
-  const { connected, gameState } = useGameSocket(
-    gameId,
-    spectator?.[gameId]?.spectator_access_token || null
-  );
+  const tokenEspectador = spectator?.[gameId]?.spectator_access_token || null;
 
-  // =========================================================================
-  // LOGICA DE HISTÓRICO: DE ACORDO COM O SWAGGER (FALLBACK MOVES -> TURNS)
-  // =========================================================================
-  const [historicoDeMoves, setHistoricoDeMoves] = useState([]);
+  // 📡 Fonte de Verdade Principal (Socket ao vivo)
+  const { connected, gameState } = useGameSocket(gameId, tokenEspectador);
 
-  async function carregarHistorico() {
+  const [historicoHttp, setHistoricoHttp] = useState([]);
+
+  // Busca HTTP de backup para o histórico
+  async function carregarHistoricoBackup() {
     try {
-      // 1. Tenta buscar pelo endpoint /moves do Swagger
-      let response = await apiClient(`/games/${gameId}/moves`, {
+      const options = tokenEspectador
+        ? { headers: { Authorization: `Bearer ${tokenEspectador}` } }
+        : {};
+      const response = await apiClient(`/games/${gameId}/moves`, {
         method: 'GET',
+        ...options,
       });
 
       let lista = Array.isArray(response)
         ? response
         : response?.moves || response?.history || response?.data || [];
 
-      // 2. 🔥 ESTRATÉGIA SWAGGER: Se /moves vier baleado ou vazio, tenta o /turns imediatamente
       if (lista.length === 0) {
         const responseTurns = await apiClient(`/games/${gameId}/turns`, {
           method: 'GET',
+          ...options,
         });
         lista = Array.isArray(responseTurns)
           ? responseTurns
-          : responseTurns?.turns ||
-            responseTurns?.history ||
-            responseTurns?.data ||
-            [];
+          : responseTurns?.turns || [];
       }
-
-      setHistoricoDeMoves(lista);
-    } catch (error) {
-      console.error('Erro ao sincronizar histórico da API:', error);
+      setHistoricoHttp(lista);
+    } catch (e) {
+      // Falha silenciosa para priorizar o socket
     }
   }
 
   useEffect(() => {
     if (gameId) {
-      carregarHistorico();
+      carregarHistoricoBackup();
     }
+    const interval = setInterval(() => {
+      if (gameId) carregarHistoricoBackup();
+    }, 4000);
 
-    const atualizadorAutomatico = setInterval(() => {
-      if (gameId) {
-        carregarHistorico();
-      }
-    }, 2500);
+    return () => clearInterval(interval);
+  }, [gameId, tokenEspectador]);
 
-    return () => clearInterval(atualizadorAutomatico);
-  }, [gameId]);
+  // Unifica os movimentos priorizando o Socket
+  const historicoDeMoves =
+    gameState?.moves ||
+    gameState?.turns ||
+    gameState?.history ||
+    historicoHttp ||
+    [];
 
   // =========================================================================
-  // 👑 RESOLUTOR DE NOMES EXTRA-FLEXÍVEL (Trata Objetos, Strings e Fallbacks)
+  // 🎯 CAPTURA E FORMATAÇÃO DE IDs E NOMES (Anti-Bug de Servidor)
   // =========================================================================
-  const obterNomeDoTime = (teamNum) => {
-    if (!gameState) return teamNum === 1 ? 'Time Turing' : 'Time Lovelace';
+  const turingPlayer =
+    gameState?.turing_player || gameState?.player_1 || gameState?.player1;
+  const lovelacePlayer =
+    gameState?.lovelace_player || gameState?.player_2 || gameState?.player2;
 
-    if (teamNum === 1) {
-      return (
-        gameState.player1_name ||
-        gameState.turing_player_name ||
-        gameState.player_1_name ||
-        (typeof gameState.player1 === 'string'
-          ? gameState.player1
-          : gameState.player1?.name) ||
-        (typeof gameState.turing_player === 'string'
-          ? gameState.turing_player
-          : gameState.turing_player?.name) ||
-        gameState.players?.[0]?.name ||
-        (typeof gameState.players?.[0] === 'string'
-          ? gameState.players[0]
-          : null) ||
-        'QumAI'
-      );
-    } else {
-      return (
-        gameState.player2_name ||
-        gameState.lovelace_player_name ||
-        gameState.player_2_name ||
-        (typeof gameState.player2 === 'string'
-          ? gameState.player2
-          : gameState.player2?.name) ||
-        (typeof gameState.lovelace_player === 'string'
-          ? gameState.lovelace_player
-          : gameState.lovelace_player?.name) ||
-        gameState.players?.[1]?.name ||
-        (typeof gameState.players?.[1] === 'string'
-          ? gameState.players[1]
-          : null) ||
-        'Rival'
-      );
+  // 1. Helper para encurtar IDs longos (UUIDs) para não estourar o layout da tela
+  const formatarIdOuNome = (playerData, campoNomeServidor, fallbackSuave) => {
+    if (!gameState) return fallbackSuave;
+
+    // Se o servidor mandou o nome direto em uma chave do root do gameState
+    if (campoNomeServidor && gameState[campoNomeServidor]) {
+      return gameState[campoNomeServidor];
     }
+
+    // Se o playerData for uma string pura (o próprio ID ou Nome enviado pelo servidor)
+    if (typeof playerData === 'string') {
+      return playerData.length > 15
+        ? `ID: ${playerData.substring(0, 8)}`
+        : playerData;
+    }
+
+    // Se for um objeto, tenta mapear as chaves conhecidas do Swagger
+    const nomeOuId =
+      playerData?.ai_player_name ||
+      playerData?.name ||
+      playerData?.id ||
+      playerData?.player_id ||
+      playerData?.userId;
+
+    if (nomeOuId) {
+      return nomeOuId.length > 18
+        ? `ID: ${nomeOuId.substring(0, 8)}`
+        : nomeOuId;
+    }
+
+    return fallbackSuave;
   };
 
-  const obterNomeDoGrupo = (teamNum) => {
-    const pData =
-      teamNum === 1
-        ? gameState?.turing_player ||
-          gameState?.player1 ||
-          gameState?.players?.[0]
-        : gameState?.lovelace_player ||
-          gameState?.player2 ||
-          gameState?.players?.[1];
+  // Resolve os identificadores de cada equipe
+  const nomeTuring = formatarIdOuNome(turingPlayer, 'player1_name', 'QumAI');
+  const nomeLovelace = formatarIdOuNome(
+    lovelacePlayer,
+    'player2_name',
+    'Rival / Randômico'
+  );
 
-    if (!pData || typeof pData === 'string')
-      return teamNum === 1 ? 'Quantum_Machine' : 'Grupo Sistema';
-    return (
-      pData.group_name ||
-      pData.group ||
-      (teamNum === 1 ? 'Quantum_Machine' : 'Grupo Sistema')
-    );
-  };
+  // Captura os IDs reais do JSON para exibir no sub-rótulo do grupo
+  const idRealTuring =
+    gameState?.player1_id ||
+    turingPlayer?.id ||
+    turingPlayer?.player_id ||
+    'ID: Turing';
+  const idRealLovelace =
+    gameState?.player2_id ||
+    lovelacePlayer?.id ||
+    lovelacePlayer?.player_id ||
+    'ID: Lovelace';
 
-  const nomeTuring = obterNomeDoTime(1);
-  const grupoTuring = obterNomeDoGrupo(1);
-  const nomeLovelace = obterNomeDoTime(2);
-  const grupoLovelace = obterNomeDoGrupo(2);
+  const grupoTuring =
+    turingPlayer?.group_name ||
+    (idRealTuring.length > 15
+      ? `ID: ${idRealTuring.substring(0, 8)}`
+      : idRealTuring);
+  const grupoLovelace =
+    lovelacePlayer?.group_name ||
+    (idRealLovelace.length > 15
+      ? `ID: ${idRealLovelace.substring(0, 8)}`
+      : idRealLovelace);
 
   const statusPartida = gameState?.status || 'AGUARDANDO';
   const turnoAtual =
     gameState?.current_turn_number ??
     gameState?.turn ??
-    (Array.isArray(historicoDeMoves) ? historicoDeMoves.length : 0);
+    historicoDeMoves.length;
   const timeDaVez = gameState?.current_turn_team_id ?? gameState?.current_turn;
 
   // =========================================================================
-  // 🧭 MAPEAMENTO DE PROFESSORES PARA ACENDER O TABULEIRO
+  // 🧭 MAPEAMENTO DE PROFESSORES
   // =========================================================================
-  // Fallback estático idêntico ao bot.py para o frontend colorir as tags mesmo sem histórico pronto
-  const professorTeams = {
-    CLARO: 1,
-    REY: 1,
-    KARIN: 2,
-    BEATRIZ: 2,
-  };
+  const professorTeams = { CLARO: 1, REY: 1, KARIN: 2, BEATRIZ: 2 };
 
   if (Array.isArray(historicoDeMoves)) {
     historicoDeMoves.forEach((move) => {
@@ -165,9 +167,8 @@ export function ViewGame({ gameId }) {
     .filter(([_, id]) => id === 2)
     .map(([p]) => p);
 
-  // Identifica as coordenadas da última jogada executada no grid
   const ultimoMove =
-    Array.isArray(historicoDeMoves) && historicoDeMoves.length > 0
+    historicoDeMoves.length > 0
       ? historicoDeMoves[historicoDeMoves.length - 1]
       : null;
   const ultimaJogadaReal =
@@ -183,7 +184,7 @@ export function ViewGame({ gameId }) {
         'flex flex-col gap-6 py-4 w-full text-white flex-1 animate-fade-in bg-zinc-950 px-2 md:px-4'
       )}
     >
-      {/* 1. CABEÇALHO DA ARENA AO VIVO */}
+      {/* 1. CABEÇALHO */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-purple-500/10 pb-4 w-full gap-2">
         <div className="flex flex-col">
           <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold">
@@ -239,7 +240,7 @@ export function ViewGame({ gameId }) {
         </div>
       </div>
 
-      {/* 2. LAYOUT EM DUAS COLUNAS */}
+      {/* 2. PLACAR DOS JOGADORES */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
         <div className="lg:col-span-3 flex flex-col gap-4 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-900">
@@ -252,9 +253,7 @@ export function ViewGame({ gameId }) {
                   : 'bg-zinc-950/40 border-zinc-800 opacity-50'
               )}
             >
-              <div className="text-xl mt-0.5" title="Legenda do Tabuleiro">
-                🟣
-              </div>
+              <div className="text-xl mt-0.5">🟣</div>
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-wider">
                   Time Turing {Number(timeDaVez) === 1 && '• SUA VEZ'}
@@ -263,7 +262,7 @@ export function ViewGame({ gameId }) {
                   {nomeTuring}
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400 block truncate font-medium mb-1">
-                  Grupo: {grupoTuring}
+                  Identificador: {grupoTuring}
                 </span>
 
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -288,9 +287,7 @@ export function ViewGame({ gameId }) {
                   : 'bg-zinc-950/40 border-zinc-800 opacity-50'
               )}
             >
-              <div className="text-xl mt-0.5" title="Legenda do Tabuleiro">
-                🔴
-              </div>
+              <div className="text-xl mt-0.5">🔴</div>
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-wider">
                   Time Lovelace {Number(timeDaVez) === 2 && '• SUA VEZ'}
@@ -299,7 +296,7 @@ export function ViewGame({ gameId }) {
                   {nomeLovelace}
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400 block truncate font-medium mb-1">
-                  Grupo: {grupoLovelace}
+                  Identificador: {grupoLovelace}
                 </span>
 
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -318,12 +315,6 @@ export function ViewGame({ gameId }) {
 
           {/* TABULEIRO */}
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-center items-center">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3 w-full mb-4">
-              <h3 className="font-bold text-sm tracking-wide text-zinc-300 font-mono">
-                MONITOR DO TABULEIRO - MOVIMENTAÇÕES EM TEMPO REAL
-              </h3>
-            </div>
-
             {gameState?.board ? (
               <div className="grid grid-cols-5 gap-3 w-full">
                 {gameState.board.map((row, rIdx) =>
@@ -351,11 +342,6 @@ export function ViewGame({ gameId }) {
                             'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-900'
                         )}
                       >
-                        {isUltimoDestino && (
-                          <span className="absolute top-1 right-1 text-[7px] bg-amber-500 text-zinc-950 px-1 rounded font-sans font-black uppercase tracking-tighter scale-90">
-                            Ação
-                          </span>
-                        )}
                         <span className="text-[9px] font-bold opacity-30 block">
                           {cell?.level ? `${cell.level}º Ano` : '0º Ano'}
                         </span>
@@ -390,7 +376,7 @@ export function ViewGame({ gameId }) {
           </div>
         </div>
 
-        {/* COLUNA DA DIREITA: HISTÓRICO */}
+        {/* COLUNA DA DIREITA: HISTÓRICO DINÂMICO */}
         <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex flex-col gap-3 min-h-[420px] lg:max-h-[520px]">
           <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
             <span className="text-[10px] font-mono text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -403,11 +389,20 @@ export function ViewGame({ gameId }) {
             {Array.isArray(historicoDeMoves) && historicoDeMoves.length > 0 ? (
               historicoDeMoves.map((move, index) => {
                 const jogada = move.move_response || move?.move || move;
-                if (!jogada || !jogada.professor) return null;
+                if (!jogada) return null;
+
+                const professorNome =
+                  jogada.professor || move.professor || 'Professor';
                 const isTuring =
                   move.team_id === 1 ||
                   move.team_id === '1' ||
-                  move.teamId === 1;
+                  move.teamId === 1 ||
+                  professorTeams[professorNome] === 1;
+
+                const rDest = jogada.move_to?.row ?? jogada.moveTo?.row ?? '?';
+                const cDest = jogada.move_to?.col ?? jogada.moveTo?.col ?? '?';
+                const rMen = jogada.mentor_at?.row ?? jogada.mentorAt?.row;
+                const cMen = jogada.mentor_at?.col ?? jogada.mentorAt?.col;
 
                 return (
                   <div
@@ -423,14 +418,10 @@ export function ViewGame({ gameId }) {
                         {isTuring ? nomeTuring : nomeLovelace}:
                       </strong>{' '}
                       <span className="text-zinc-400">
-                        moveu {jogada.professor} para (
-                        {jogada.move_to?.row ?? jogada.moveTo?.row},{' '}
-                        {jogada.move_to?.col ?? jogada.moveTo?.col})
-                        {(jogada.mentor_at || jogada.mentorAt) && (
+                        moveu {professorNome} para ({rDest}, {cDest})
+                        {rMen !== undefined && (
                           <span className="block text-[10px] text-zinc-500 italic mt-0.5">
-                            ↳ Construiu na casa (
-                            {jogada.mentor_at?.row ?? jogada.mentorAt?.row},{' '}
-                            {jogada.mentor_at?.col ?? jogada.mentorAt?.col})
+                            ↳ Construiu na casa ({rMen}, {cMen})
                           </span>
                         )}
                       </span>

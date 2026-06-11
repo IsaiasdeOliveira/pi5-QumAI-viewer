@@ -62,5 +62,5 @@ Para iniciar o visualizador da Arena em sua máquina, certifique-se de ter o **N
 4. Abra o seu navegador e acesse o endereço gerado no terminal (geralmente http://localhost:5173).
 
 ## Documentação de Entrega e Decisões de Projeto
-Para uma explicação detalhada sobre as motivações de design, a estrutura de montagem de cada componente, tratamento de falhas e os critérios obrigatórios avaliados pelo professor, acesse o arquivo REPORT.md presente na raiz deste repositório.
+Para uma explicação detalhada sobre as motivações de design, a estrutura de montagem de cada componente, tratamento de falhas e os critérios obrigatórios avaliados pelo professor, acesse o arquivo **[REPORT.md](./REPORT.md)** presente na raiz deste repositório.
    

@@ -2,12 +2,12 @@ import { useGameContext } from '../context/game-context';
 import { useGameSocket } from '../hooks/useGameSocket';
 import { Typography } from '@ui/text/typography';
 import { cn } from '@core/helpers';
-import { useNavigate } from 'react-router-dom'; // 1. Hook de navegação adicionado
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 export function ViewGame({ gameId }) {
   const { spectator } = useGameContext();
-  const navigate = useNavigate(); // 2. Instância de navegação
+  const navigate = useNavigate();
 
   const { connected, gameState } = useGameSocket(
     gameId,
@@ -15,18 +15,37 @@ export function ViewGame({ gameId }) {
   );
 
   // =========================================================================
-  // LOGICA DE HISTÓRICO HTTP EM TEMPO REAL
+  // LOGICA DE HISTÓRICO: DE ACORDO COM O SWAGGER (FALLBACK MOVES -> TURNS)
   // =========================================================================
   const [historicoDeMoves, setHistoricoDeMoves] = useState([]);
 
   async function carregarHistorico() {
     try {
-      const moves = await apiClient(`/games/${gameId}/moves`, {
+      // 1. Tenta buscar pelo endpoint /moves do Swagger
+      let response = await apiClient(`/games/${gameId}/moves`, {
         method: 'GET',
       });
-      setHistoricoDeMoves(moves);
+
+      let lista = Array.isArray(response)
+        ? response
+        : response?.moves || response?.history || response?.data || [];
+
+      // 2. 🔥 ESTRATÉGIA SWAGGER: Se /moves vier baleado ou vazio, tenta o /turns imediatamente
+      if (lista.length === 0) {
+        const responseTurns = await apiClient(`/games/${gameId}/turns`, {
+          method: 'GET',
+        });
+        lista = Array.isArray(responseTurns)
+          ? responseTurns
+          : responseTurns?.turns ||
+            responseTurns?.history ||
+            responseTurns?.data ||
+            [];
+      }
+
+      setHistoricoDeMoves(lista);
     } catch (error) {
-      console.error('Erro ao carregar o histórico:', error);
+      console.error('Erro ao sincronizar histórico da API:', error);
     }
   }
 
@@ -39,47 +58,124 @@ export function ViewGame({ gameId }) {
       if (gameId) {
         carregarHistorico();
       }
-    }, 2000);
+    }, 2500);
 
     return () => clearInterval(atualizadorAutomatico);
   }, [gameId]);
 
-  // Captura os dados dos jogadores independentemente de como o servidor os nomeia
-  const turingPlayer =
-    gameState?.turing_player || gameState?.player_1 || gameState?.player1;
-  const lovelacePlayer =
-    gameState?.lovelace_player || gameState?.player_2 || gameState?.player2;
+  // =========================================================================
+  // 👑 RESOLUTOR DE NOMES EXTRA-FLEXÍVEL (Trata Objetos, Strings e Fallbacks)
+  // =========================================================================
+  const obterNomeDoTime = (teamNum) => {
+    if (!gameState) return teamNum === 1 ? 'Time Turing' : 'Time Lovelace';
 
-  // Captura as estatísticas de status e turnos
+    if (teamNum === 1) {
+      return (
+        gameState.player1_name ||
+        gameState.turing_player_name ||
+        gameState.player_1_name ||
+        (typeof gameState.player1 === 'string'
+          ? gameState.player1
+          : gameState.player1?.name) ||
+        (typeof gameState.turing_player === 'string'
+          ? gameState.turing_player
+          : gameState.turing_player?.name) ||
+        gameState.players?.[0]?.name ||
+        (typeof gameState.players?.[0] === 'string'
+          ? gameState.players[0]
+          : null) ||
+        'QumAI'
+      );
+    } else {
+      return (
+        gameState.player2_name ||
+        gameState.lovelace_player_name ||
+        gameState.player_2_name ||
+        (typeof gameState.player2 === 'string'
+          ? gameState.player2
+          : gameState.player2?.name) ||
+        (typeof gameState.lovelace_player === 'string'
+          ? gameState.lovelace_player
+          : gameState.lovelace_player?.name) ||
+        gameState.players?.[1]?.name ||
+        (typeof gameState.players?.[1] === 'string'
+          ? gameState.players[1]
+          : null) ||
+        'Rival'
+      );
+    }
+  };
+
+  const obterNomeDoGrupo = (teamNum) => {
+    const pData =
+      teamNum === 1
+        ? gameState?.turing_player ||
+          gameState?.player1 ||
+          gameState?.players?.[0]
+        : gameState?.lovelace_player ||
+          gameState?.player2 ||
+          gameState?.players?.[1];
+
+    if (!pData || typeof pData === 'string')
+      return teamNum === 1 ? 'Quantum_Machine' : 'Grupo Sistema';
+    return (
+      pData.group_name ||
+      pData.group ||
+      (teamNum === 1 ? 'Quantum_Machine' : 'Grupo Sistema')
+    );
+  };
+
+  const nomeTuring = obterNomeDoTime(1);
+  const grupoTuring = obterNomeDoGrupo(1);
+  const nomeLovelace = obterNomeDoTime(2);
+  const grupoLovelace = obterNomeDoGrupo(2);
+
   const statusPartida = gameState?.status || 'AGUARDANDO';
-  const turnoAtual = gameState?.current_turn_number ?? gameState?.turn ?? 0;
+  const turnoAtual =
+    gameState?.current_turn_number ??
+    gameState?.turn ??
+    (Array.isArray(historicoDeMoves) ? historicoDeMoves.length : 0);
   const timeDaVez = gameState?.current_turn_team_id ?? gameState?.current_turn;
 
   // =========================================================================
-  // ── DETECTOR INTELIGENTE DE TIMES E ÚLTIMO MOVIMENTO ──
+  // 🧭 MAPEAMENTO DE PROFESSORES PARA ACENDER O TABULEIRO
   // =========================================================================
+  // Fallback estático idêntico ao bot.py para o frontend colorir as tags mesmo sem histórico pronto
+  const professorTeams = {
+    CLARO: 1,
+    REY: 1,
+    KARIN: 2,
+    BEATRIZ: 2,
+  };
 
-  // 1. Cria um mapeamento dinâmico de qual professor pertence a qual time
-  const professorTeams = {};
-  historicoDeMoves.forEach((move) => {
-    if (move?.move_response?.professor) {
-      professorTeams[move.move_response.professor] = move.team_id;
-    }
-  });
+  if (Array.isArray(historicoDeMoves)) {
+    historicoDeMoves.forEach((move) => {
+      const jogadaReal = move?.move_response || move?.move || move;
+      if (jogadaReal?.professor) {
+        const teamId = move.team_id ?? move.teamId ?? move.current_turn_team_id;
+        if (teamId) professorTeams[jogadaReal.professor] = Number(teamId);
+      }
+    });
+  }
 
-  // 2. Filtra as listas de professores de cada time para a legenda
   const turingProfs = Object.entries(professorTeams)
-    .filter(([_, teamId]) => teamId === 1)
-    .map(([prof]) => prof);
-
+    .filter(([_, id]) => id === 1)
+    .map(([p]) => p);
   const lovelaceProfs = Object.entries(professorTeams)
-    .filter(([_, teamId]) => teamId === 2)
-    .map(([prof]) => prof);
+    .filter(([_, id]) => id === 2)
+    .map(([p]) => p);
 
-  // 3. Descobre as coordenadas exatas de onde aconteceu a última jogada
-  const ultimoMove = historicoDeMoves[historicoDeMoves.length - 1];
-  const ultRow = ultimoMove?.move_response?.move_to?.row;
-  const ultCol = ultimoMove?.move_response?.move_to?.col;
+  // Identifica as coordenadas da última jogada executada no grid
+  const ultimoMove =
+    Array.isArray(historicoDeMoves) && historicoDeMoves.length > 0
+      ? historicoDeMoves[historicoDeMoves.length - 1]
+      : null;
+  const ultimaJogadaReal =
+    ultimoMove?.move_response || ultimoMove?.move || ultimoMove;
+  const ultRow =
+    ultimaJogadaReal?.move_to?.row ?? ultimaJogadaReal?.moveTo?.row;
+  const ultCol =
+    ultimaJogadaReal?.move_to?.col ?? ultimaJogadaReal?.moveTo?.col;
 
   return (
     <div
@@ -91,7 +187,7 @@ export function ViewGame({ gameId }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-purple-500/10 pb-4 w-full gap-2">
         <div className="flex flex-col">
           <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold">
-            Monitoramento de Partida em Tempo Real
+            Monitoramento de Partida em Tempo Real (Turno: {turnoAtual})
           </span>
           <Typography
             variant={'h1'}
@@ -106,13 +202,11 @@ export function ViewGame({ gameId }) {
           </span>
         </div>
 
-        {/* STATUS DA CONEXÃO & BOTÃO DE DETALHES */}
         <div className="flex items-center gap-3">
-          {/* 3. Renderização Condicional do Botão (Aparece apenas quando FINISHED) */}
           {statusPartida === 'FINISHED' && (
             <button
               onClick={() => navigate(`/game-details/${gameId}`)}
-              className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] animate-pulse hover:animate-none border border-purple-400"
+              className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-4 py-2 rounded-lg font-bold uppercase tracking-wider transition-all border border-purple-400"
             >
               Ver Detalhes da Partida
             </button>
@@ -147,15 +241,13 @@ export function ViewGame({ gameId }) {
 
       {/* 2. LAYOUT EM DUAS COLUNAS */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full items-start">
-        {/* COLUNA DA ESQUERDA (TABULEIRO + CONTROLE DE RODADA) */}
         <div className="lg:col-span-3 flex flex-col gap-4 w-full">
-          {/* CONTROLE DE RODADA COM LEGENDA DE PROFESSORES */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-900">
-            {/* TIME TURING (Seu Time) */}
+            {/* TIME TURING */}
             <div
               className={cn(
                 'p-3 rounded-lg border transition-all flex items-start gap-3',
-                timeDaVez === 1 || timeDaVez === '1'
+                Number(timeDaVez) === 1
                   ? 'bg-purple-950/20 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.1)] font-bold'
                   : 'bg-zinc-950/40 border-zinc-800 opacity-50'
               )}
@@ -165,42 +257,33 @@ export function ViewGame({ gameId }) {
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-wider">
-                  Time Turing {timeDaVez === 1 && '• SUA VEZ'}
+                  Time Turing {Number(timeDaVez) === 1 && '• SUA VEZ'}
                 </span>
                 <span className="text-sm text-zinc-200 block truncate font-extrabold text-purple-300">
-                  {turingPlayer?.ai_player_name ||
-                    turingPlayer?.name ||
-                    'QumAI'}
+                  {nomeTuring}
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400 block truncate font-medium mb-1">
-                  Grupo: {turingPlayer?.group_name || 'Quantum_Machine'}
+                  Grupo: {grupoTuring}
                 </span>
 
-                {/* Lista de Professores do Turing */}
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {turingProfs.length > 0 ? (
-                    turingProfs.map((prof) => (
-                      <span
-                        key={prof}
-                        className="text-[9px] bg-purple-900/40 border border-purple-500/30 px-1.5 py-0.5 rounded text-purple-200 font-mono"
-                      >
-                        {prof}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[9px] text-zinc-600 italic font-mono">
-                      Mapeando professores...
+                  {turingProfs.map((prof) => (
+                    <span
+                      key={prof}
+                      className="text-[9px] bg-purple-900/40 border border-purple-500/30 px-1.5 py-0.5 rounded text-purple-200 font-mono"
+                    >
+                      {prof}
                     </span>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* TIME LOVELACE (Adversário) */}
+            {/* TIME LOVELACE */}
             <div
               className={cn(
                 'p-3 rounded-lg border transition-all flex items-start gap-3',
-                timeDaVez === 2 || timeDaVez === '2'
+                Number(timeDaVez) === 2
                   ? 'bg-fuchsia-950/20 border-fuchsia-500 shadow-[0_0_10px_rgba(217,70,239,0.1)] font-bold'
                   : 'bg-zinc-950/40 border-zinc-800 opacity-50'
               )}
@@ -210,39 +293,30 @@ export function ViewGame({ gameId }) {
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-wider">
-                  Time Lovelace {timeDaVez === 2 && '• SUA VEZ'}
+                  Time Lovelace {Number(timeDaVez) === 2 && '• SUA VEZ'}
                 </span>
                 <span className="text-sm text-zinc-200 block truncate font-extrabold text-fuchsia-300">
-                  {lovelacePlayer?.ai_player_name ||
-                    lovelacePlayer?.name ||
-                    'Rival / Bot Randômico'}
+                  {nomeLovelace}
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400 block truncate font-medium mb-1">
-                  Grupo: {lovelacePlayer?.group_name || 'Sistema da Arena'}
+                  Grupo: {grupoLovelace}
                 </span>
 
-                {/* Lista de Professores do Lovelace */}
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {lovelaceProfs.length > 0 ? (
-                    lovelaceProfs.map((prof) => (
-                      <span
-                        key={prof}
-                        className="text-[9px] bg-fuchsia-900/40 border border-fuchsia-500/30 px-1.5 py-0.5 rounded text-fuchsia-200 font-mono"
-                      >
-                        {prof}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[9px] text-zinc-600 italic font-mono">
-                      Mapeando professores...
+                  {lovelaceProfs.map((prof) => (
+                    <span
+                      key={prof}
+                      className="text-[9px] bg-fuchsia-900/40 border border-fuchsia-500/30 px-1.5 py-0.5 rounded text-fuchsia-200 font-mono"
+                    >
+                      {prof}
                     </span>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* TABULEIRO DE ENTRADA */}
+          {/* TABULEIRO */}
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-center items-center">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-3 w-full mb-4">
               <h3 className="font-bold text-sm tracking-wide text-zinc-300 font-mono">
@@ -255,11 +329,7 @@ export function ViewGame({ gameId }) {
                 {gameState.board.map((row, rIdx) =>
                   row.map((cell, cIdx) => {
                     const hasProf = !!cell?.professor;
-
-                    // Identifica o time dono desse professor específico
                     const timeDoProf = professorTeams[cell?.professor];
-
-                    // Verifica se esta casa foi o destino exato da última ação
                     const isUltimoDestino = ultRow === rIdx && ultCol === cIdx;
 
                     return (
@@ -274,20 +344,18 @@ export function ViewGame({ gameId }) {
                           cell?.level === 3 &&
                             'bg-fuchsia-950/40 border-fuchsia-500/40 text-fuchsia-200',
                           cell?.level === 4 &&
-                            'bg-amber-500/10 border-amber-500 text-amber-300 shadow-[inset_0_0_10px_rgba(245,158,11,0.2)]',
+                            'bg-amber-500/10 border-amber-500 text-amber-300',
                           (!cell || cell?.level === 0 || !cell?.level) &&
                             'bg-zinc-950/60 border-zinc-800/60 text-zinc-600',
                           isUltimoDestino &&
-                            'border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(245,158,11,0.6)] bg-zinc-900 animate-pulse'
+                            'border-amber-400 ring-2 ring-amber-400/40 bg-zinc-900'
                         )}
                       >
-                        {/* Tag discreta indicando que foi ali a última movimentação */}
                         {isUltimoDestino && (
                           <span className="absolute top-1 right-1 text-[7px] bg-amber-500 text-zinc-950 px-1 rounded font-sans font-black uppercase tracking-tighter scale-90">
                             Ação
                           </span>
                         )}
-
                         <span className="text-[9px] font-bold opacity-30 block">
                           {cell?.level ? `${cell.level}º Ano` : '0º Ano'}
                         </span>
@@ -296,18 +364,16 @@ export function ViewGame({ gameId }) {
                           <span
                             className={cn(
                               'text-[9px] font-black bg-zinc-900 px-1.5 py-0.5 rounded border truncate max-w-full mt-2 shadow-md flex items-center gap-1',
-                              timeDoProf === 1 &&
-                                'border-purple-500 text-purple-300 shadow-[0_0_6px_rgba(168,85,247,0.2)]',
-                              timeDoProf === 2 &&
-                                'border-fuchsia-500 text-fuchsia-300 shadow-[0_0_6px_rgba(217,70,239,0.2)]',
+                              Number(timeDoProf) === 1 &&
+                                'border-purple-500 text-purple-300',
+                              Number(timeDoProf) === 2 &&
+                                'border-fuchsia-500 text-fuchsia-300',
                               !timeDoProf && 'border-zinc-800 text-zinc-400'
                             )}
                           >
-                            {/* Pontinho indicador de equipe */}
-                            {timeDoProf === 1 && '🟣'}
-                            {timeDoProf === 2 && '🔴'}
+                            {Number(timeDoProf) === 1 && '🟣'}
+                            {Number(timeDoProf) === 2 && '🔴'}
                             {!timeDoProf && '👤'}
-
                             <span>{cell.professor}</span>
                           </span>
                         )}
@@ -324,25 +390,24 @@ export function ViewGame({ gameId }) {
           </div>
         </div>
 
-        {/* COLUNA DA DIREITA: HISTÓRICO DE LOGS HTTP REAL */}
+        {/* COLUNA DA DIREITA: HISTÓRICO */}
         <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex flex-col gap-3 min-h-[420px] lg:max-h-[520px]">
           <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
             <span className="text-[10px] font-mono text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-ping" />
               Histórico de Ações
             </span>
-            <span className="text-[9px] font-mono text-zinc-600 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800">
-              REGISTRO OFICIAL
-            </span>
           </div>
 
-          {/* LISTA DINÂMICA DE MOVES */}
-          <div className="flex-1 overflow-y-auto font-mono text-[11px] flex flex-col gap-2 max-h-[440px] pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
-            {historicoDeMoves.length > 0 ? (
+          <div className="flex-1 overflow-y-auto font-mono text-[11px] flex flex-col gap-2 max-h-[440px] pr-1 scrollbar-thin">
+            {Array.isArray(historicoDeMoves) && historicoDeMoves.length > 0 ? (
               historicoDeMoves.map((move, index) => {
-                const jogada = move.move_response;
+                const jogada = move.move_response || move?.move || move;
                 if (!jogada || !jogada.professor) return null;
-                const isTuring = move.team_id === 1;
+                const isTuring =
+                  move.team_id === 1 ||
+                  move.team_id === '1' ||
+                  move.teamId === 1;
 
                 return (
                   <div
@@ -355,15 +420,17 @@ export function ViewGame({ gameId }) {
                           isTuring ? 'text-purple-400' : 'text-fuchsia-400'
                         }
                       >
-                        {isTuring ? 'Turing' : 'Lovelace'}:
+                        {isTuring ? nomeTuring : nomeLovelace}:
                       </strong>{' '}
                       <span className="text-zinc-400">
-                        moveu {jogada.professor} para ({jogada.move_to?.row},{' '}
-                        {jogada.move_to?.col})
-                        {jogada.mentor_at && (
+                        moveu {jogada.professor} para (
+                        {jogada.move_to?.row ?? jogada.moveTo?.row},{' '}
+                        {jogada.move_to?.col ?? jogada.moveTo?.col})
+                        {(jogada.mentor_at || jogada.mentorAt) && (
                           <span className="block text-[10px] text-zinc-500 italic mt-0.5">
-                            ↳ Construiu na casa ({jogada.mentor_at.row},{' '}
-                            {jogada.mentor_at.col})
+                            ↳ Construiu na casa (
+                            {jogada.mentor_at?.row ?? jogada.mentorAt?.row},{' '}
+                            {jogada.mentor_at?.col ?? jogada.mentorAt?.col})
                           </span>
                         )}
                       </span>
@@ -376,15 +443,12 @@ export function ViewGame({ gameId }) {
                 <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-600">
                   Sem Movimentação
                 </span>
-                <p className="text-[10px] max-w-[160px] text-zinc-500 normal-case text-center">
-                  Nenhuma ação registrada no servidor ainda.
-                </p>
               </div>
             )}
           </div>
 
           <div className="bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-center text-[10px] uppercase font-bold tracking-wider text-purple-400">
-            Total de Ações: {historicoDeMoves.length}
+            Total de Ações: {historicoDeMoves?.length || 0}
           </div>
         </div>
       </div>
